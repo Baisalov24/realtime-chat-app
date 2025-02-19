@@ -7,6 +7,8 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import Message from "./models/MessageModel.js";  
+import Chat from "./models/ChatModel.js";  
 
 dotenv.config();
 
@@ -33,9 +35,33 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  socket.on("message", (data) => {
-    console.log(`Message received: ${JSON.stringify(data)}`);
-    io.emit("message", data); 
+  socket.on("sendMessage", async (data) => {
+    const { chatId, content, senderId } = data;
+    try {
+      const message = await Message.create({
+        chat: chatId,
+        sender: senderId,
+        content,
+      });
+
+      io.to(chatId).emit("message", message);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  });
+
+  socket.on("createChat", async (participants) => {
+    try {
+      const chat = await Chat.create({ participants });
+      io.emit("chatCreated", chat); 
+    } catch (error) {
+      console.error("Error creating chat:", error);
+    }
+  });
+
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId); 
+    console.log(`User ${socket.id} joined chat ${chatId}`);
   });
 
   socket.on("disconnect", () => {
@@ -43,7 +69,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("error", (err) => {
-    console.error(` Socket error: ${err.message}`);
+    console.error(`Socket error: ${err.message}`);
   });
 });
 
