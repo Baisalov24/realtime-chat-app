@@ -1,5 +1,5 @@
-import Chat from "../models/Chat.js";
-import Message from "../models/Message.js";
+import Chat from "../models/ChatModel.js";
+import Message from "../models/MessageModel.js";
 
 /**
  * @desc 
