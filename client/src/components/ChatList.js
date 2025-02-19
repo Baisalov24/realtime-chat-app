@@ -1,17 +1,34 @@
 import React, { useState, useEffect } from "react";
-import ChatWindow from "./ChatWindow";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import ChatWindow from "./ChatWindow";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    
-    axios.get("http://localhost:5000/api/chats")
-      .then((response) => setChats(response.data))
-      .catch((err) => console.error("Error fetching chats:", err));
-  }, []);
+    // Получаем токен из localStorage
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      axios
+        .get("http://localhost:5000/api/chats", {
+          headers: {
+            Authorization: `Bearer ${token}`, // Передаем токен в заголовке
+          },
+        })
+        .then((response) => setChats(response.data))
+        .catch((err) => {
+          console.error("Error fetching chats:", err);
+          navigate("/login");
+        });
+    } else {
+      navigate("/login");
+
+    }
+  }, [navigate]);
 
   const handleSelectChat = (chatId) => {
     setSelectedChat(chatId);
