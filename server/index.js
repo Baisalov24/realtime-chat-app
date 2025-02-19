@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db";
+import authRoutes from "./routes/authRoutes.js";
 
 connectDB();
 dotenv.config();
@@ -18,6 +19,7 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server is running...");
