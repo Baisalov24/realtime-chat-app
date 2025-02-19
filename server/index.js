@@ -3,7 +3,9 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
+import connectDB from "./config/db";
 
+connectDB();
 dotenv.config();
 
 const app = express();
