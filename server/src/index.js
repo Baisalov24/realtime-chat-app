@@ -1,77 +1,42 @@
 import express from "express";
-import http from "http";
-import { Server } from "socket.io";
-import cors from "cors";
 import dotenv from "dotenv";
-import connectDB from "./config/db.js";
-import authRoutes from "./routes/authRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
-import messageRoutes from "./routes/messageRoutes.js";
-import Message from "./models/MessageModel.js";  
-import Chat from "./models/ChatModel.js";  
+import cookieParser from "cookie-parser";
+import cors from "cors";
+
+import path from "path";
+
+import { connectDB } from "./lib/db.js";
+
+import authRoutes from "./routes/auth.route.js";
+import messageRoutes from "./routes/message.route.js";
+import { app, server } from "./lib/socket.js";
 
 dotenv.config();
 
-connectDB();
+const PORT = process.env.PORT;
+const __dirname = path.resolve();
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
-});
-
-app.use(cors());
 app.use(express.json());
-app.use("/api/chats", chatRoutes);
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-app.get("/", (req, res) => {
-  res.send("Server is running...");
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  });
+}
+
+server.listen(PORT, () => {
+  console.log("server is running on PORT:" + PORT);
+  connectDB();
 });
-
-io.on("connection", (socket) => {
-  console.log(`User connected: ${socket.id}`);
-
-  socket.on("sendMessage", async (data) => {
-    const { chatId, content, senderId } = data;
-    try {
-      const message = await Message.create({
-        chat: chatId,
-        sender: senderId,
-        content,
-      });
-
-      io.to(chatId).emit("message", message);
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
-  });
-
-  socket.on("createChat", async (participants) => {
-    try {
-      const chat = await Chat.create({ participants });
-      io.emit("chatCreated", chat); 
-    } catch (error) {
-      console.error("Error creating chat:", error);
-    }
-  });
-
-  socket.on("joinChat", (chatId) => {
-    socket.join(chatId); 
-    console.log(`User ${socket.id} joined chat ${chatId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
-
-  socket.on("error", (err) => {
-    console.error(`Socket error: ${err.message}`);
-  });
-});
-
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
